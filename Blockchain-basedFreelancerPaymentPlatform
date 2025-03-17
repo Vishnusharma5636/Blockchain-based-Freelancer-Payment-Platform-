@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract NFTArtMarketplace {
+    struct Art {
+        uint256 id;
+        string title;
+        string artist;
+        uint256 price;
+        address owner;
+        bool isForSale;
+    }
+
+    mapping(uint256 => Art) public arts;
+    uint256 public artCount;
+
+    event ArtCreated(uint256 id, string title, string artist, uint256 price, address owner);
+    event ArtListedForSale(uint256 id, uint256 price);
+    event ArtSold(uint256 id, address newOwner);
+
+    constructor() {
+        artCount = 0;
+    }
+
+    function createArt(string memory _title, string memory _artist, uint256 _price) public {
+        artCount++;
+        arts[artCount] = Art(artCount, _title, _artist, _price, msg.sender, false);
+        emit ArtCreated(artCount, _title, _artist, _price, msg.sender);
+    }
+
+    function listArtForSale(uint256 _id, uint256 _price) public {
+        require(arts[_id].owner == msg.sender, "You are not the owner of this art.");
+        arts[_id].isForSale = true;
+        arts[_id].price = _price;
+        emit ArtListedForSale(_id, _price);
+    }
+
+    function buyArt(uint256 _id) public payable {
+        require(arts[_id].isForSale, "This art is not for sale.");
+        require(msg.value >= arts[_id].price, "Insufficient funds sent.");
+        
+        address previousOwner = arts[_id].owner;
+        arts[_id].owner = msg.sender;
+        arts[_id].isForSale = false;
+
+        payable(previousOwner).transfer(msg.value);
+        emit ArtSold(_id, msg.sender);
+    }
+}
